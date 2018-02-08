@@ -5,6 +5,11 @@ import pandas as pd
 
 DATA_DIR = 'data/json/'
 
+START_TOKEN = '<TITLE_START>'
+END_TOKEN = '<TITLE_START/>'
+
+
+
 ALL_FILES = os.listdir(DATA_DIR)
 
 TRAIN_FILES = [file for file in ALL_FILES if 'train' in file and 'all' not in file and 'shuffled' not in file]
@@ -28,7 +33,9 @@ def files_to_examples(DIR, FILES):
                 assert type(method['filename']) is str
                 assert type(method['name']) is list
                 assert type(method['tokens']) == list
-                data.append((file, method['filename'], ' '.join(method['name']), ' '.join(method['tokens'])))
+                method_name = START_TOKEN + ' ' + ' '.join(method['name']) + ' ' + END_TOKEN
+                method_body = ' '.join(method['tokens'])
+                data.append((method_name, method_body))
     return data
 
 train_data = files_to_examples(DATA_DIR, TRAIN_FILES)
