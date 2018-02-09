@@ -10,10 +10,12 @@ class Dictionary:
     """
 
     def __init__(self):
+        self.PAD_TOKEN = '<PAD>'
         self.UNK_TOKEN = '<UNK>'
         self.next_id = 0
         self.token_to_id = {}
         self.id_to_token = {}
+        self.add_or_get_id(self.get_pad())
         self.add_or_get_id(self.get_unk())
 
     def add_or_get_id(self, token):
@@ -73,6 +75,19 @@ class Dictionary:
     def get_unk(self):
         return self.UNK_TOKEN
 
+    def get_unk_idx(self):
+        unk_idx = self.get_id_or_none(self.get_unk())
+        assert unk_idx is not None
+        return pad_idx
+
+    def get_pad(self):
+        return self.PAD_TOKEN
+
+    def get_pad_idx(self):
+        pad_idx = self.get_id_or_none(self.get_pad())
+        assert pad_idx is not None
+        return pad_idx
+
     def build_dict(self, sources: list, threshold: int=10) -> None:
         """
         Names and bodies share a dictionary, so this function allows you to put both in at once
@@ -89,7 +104,7 @@ class Dictionary:
         for source in sources: 
             for item in tqdm(source, desc='Building counter'):
                     #get rid of the <id> tags
-                    code = list(filter(lambda t: t != "<id>" and t != "</id>", item.split()))
+                    code = list(filter(lambda t: t != "<id>" and t != "</id>", item))
                     token_counter.update(code)
 
         for token, count in tqdm(token_counter.items(), desc='Building dictionary'):
@@ -106,12 +121,46 @@ class Dictionary:
         temp = []
 
         for tokens in tqdm(source, desc='Tokenizing'):
-            temp.append([self.get_id_or_unk(token) for token in tokens.split()])
+            temp.append([self.get_id_or_unk(token) for token in tokens])
 
         assert len(source) == len(temp)
 
         return temp
-            
+
+    def pad_sequences(self, source: list, max_length: int = 0) -> list:
+        """
+        Gets a list of indices and pads them to max length
+        Sequence should already be trimmed!
+        """
+        assert type(source) is list
+        assert type(source[0]) is list
+        assert type(source[0][0]) is int, 'Sequences must already be indexed!'
+        assert type(max_length) is int
+
+        pad_idx = self.get_pad_idx()
+        assert pad_idx is not None
+
+        #if max_length is 0 or less, it means we calculate it
+        if max_length <= 0:
+            max_length = max(list(map(len, source)))
+
+        #get the true value of the lengths before padding, to potentially use later
+        lengths = list(map(len, source))
+
+        temp = []
+        
+
+        for indices in tqdm(source, desc='Padding sequences'):
+            assert len(indices) <= max_length, 'Indices should already be truncated to max_length!'
+            indices = indices + [pad_idx for _ in  range(max_length - len(indices))]
+            assert len(indices) == max_length, 'Padding error! Padded sequence != max_length!'
+            temp.append(indices)
+
+        assert len(lengths) == len(temp)
+
+        return temp, lengths
+
+                
 
 
 class Corpus:

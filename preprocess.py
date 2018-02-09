@@ -8,8 +8,6 @@ DATA_DIR = 'data/json/'
 START_TOKEN = '<TITLE_START>'
 END_TOKEN = '<TITLE_START/>'
 
-
-
 ALL_FILES = os.listdir(DATA_DIR)
 
 TRAIN_FILES = [file for file in ALL_FILES if 'train' in file and 'all' not in file and 'shuffled' not in file]
