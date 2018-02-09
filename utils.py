@@ -75,3 +75,42 @@ def get_mask(lengths: torch.LongTensor, max_length: int, mask_value: float) -> t
             mask[i][length:].fill_(mask_value)
 
     return mask
+
+def f1_score(pred: torch.LongTensor, target: torch.LongTensor) -> Tuple[float, float, float]:
+    """
+    TODO: Make sure this works properly!
+    TODO: Make this work without converting to lists! 
+
+    Takes two LongTensors and produces the f1-score, precision and recall.
+    """
+    assert type(pred) is torch.LongTensor
+    assert type(target) is torch.LongTensor
+
+    pred = list(pred)
+    target = list(target)
+
+    tp = 0
+    _target = target[:] #make a copy so we don't delete the actual list
+
+    for p in pred:
+        if p in _target:
+            tp += 1
+            target
+            del _target[_target.index(p)]
+
+    precision = tp/len(pred)
+
+    _pred = pred[:] #make another copy
+
+    tp = 0 #i don't think we need to calculate this again?
+
+    for t in target:
+        if t in _pred:
+            tp += 1 #i don't think we need to calculate this again?
+            del _pred[_pred.index(t)]
+
+    recall = tp/len(target)
+
+    f1 = 2 * (precision*recall)/(precision+recall)
+
+    return f1, precision, recall
