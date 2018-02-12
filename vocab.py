@@ -121,7 +121,10 @@ class Dictionary:
         temp = []
 
         for tokens in tqdm(source, desc='Tokenizing'):
-            temp.append([self.get_id_or_unk(token) for token in tokens])
+            if type(source[0]) is list: #this is to let us tokenize things that aren't list of lists, i.e. targets will be list of ints
+                temp.append([self.get_id_or_unk(token) for token in tokens])
+            else:
+                temp.append(self.get_id_or_unk(tokens))
 
         assert len(source) == len(temp)
 
@@ -157,6 +160,7 @@ class Dictionary:
             temp.append(indices)
 
         assert len(lengths) == len(temp)
+        assert len(source) == len(temp)
 
         return temp, lengths
 

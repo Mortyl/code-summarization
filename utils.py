@@ -1,20 +1,28 @@
 import torch
+import torch.utils.data
 from tqdm import tqdm
 import itertools
 from typing import Tuple
 import pandas as pd
 
-def get_data(path: str) -> Tuple[list, list]:
+def get_data(path: str, limit: int) -> Tuple[list, list]:
     """
     Given a path to a .csv file with two columns, first containing the method names and
     the second containing the method bodies
+
+    Limit is the amount of examples we want, a limit of 0 or less means we get all.
     """
     assert type(path) is str
+    assert type(limit) is int
 
     data = pd.read_csv(path, header=None)
 
     names = data[0].values.tolist()
     bodies = data[1].values.tolist()
+
+    if limit > 0:
+        names = names[:limit]
+        bodies = bodies[:limit]
 
     assert len(names) == len(bodies), f'Not equal amount of names and bodies! {len(names)} names, {len(bodies)} bodies.'
 
@@ -25,7 +33,18 @@ def get_data(path: str) -> Tuple[list, list]:
     for i, b in enumerate(tqdm(bodies, desc='Splitting bodies')):
         bodies[i] = b.split()
 
-    return names, bodies
+    _bodies = []
+    _prev = []
+    _targets = []
+
+    for i, name in enumerate(tqdm(names, desc='Creating examples')):
+        for j, n in enumerate(name[1:], start=1):
+            _bodies.append(bodies[i])
+            _prev.append(name[:j])
+            _targets.append(n)
+            
+
+    return _bodies, _prev, _targets
 
 def filter_max_length(source: list, max_length: int) -> list:
     """
@@ -75,6 +94,30 @@ def get_mask(lengths: torch.LongTensor, max_length: int, mask_value: float) -> t
             mask[i][length:].fill_(mask_value)
 
     return mask
+
+class SubtokenDataset(torch.utils.data.Dataset):
+
+    def __init__(self, bodies, prev, target):
+        """
+        The standard PyTorch dataset objects only handle single-input-single-output data loading
+        This handles multi-input-single-output
+        """
+
+        assert len(bodies) == len(prev)
+        assert len(prev) == len(target)
+
+        self.bodies = bodies
+        self.prev = prev
+        self.target = target
+
+
+    def __len__(self):
+        return len(self.bodies)
+
+    def __getitem__(self, idx):
+        #self.target[idx] needs to be wrapped in list!
+        return torch.LongTensor(self.bodies[idx]), torch.LongTensor(self.prev[idx]), torch.LongTensor([self.target[idx]])
+
 
 def f1_score(pred: torch.LongTensor, target: torch.LongTensor) -> Tuple[float, float, float]:
     """
