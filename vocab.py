@@ -103,9 +103,7 @@ class Dictionary:
         #build counter
         for source in sources: 
             for item in tqdm(source, desc='Building counter'):
-                    #get rid of the <id> tags
-                    code = list(filter(lambda t: t != "<id>" and t != "</id>", item))
-                    token_counter.update(code)
+                    token_counter.update(item)
 
         for token, count in tqdm(token_counter.items(), desc='Building dictionary'):
             if count >= threshold:
@@ -163,34 +161,3 @@ class Dictionary:
         assert len(source) == len(temp)
 
         return temp, lengths
-
-                
-
-
-class Corpus:
-
-    def __init__(self, names, code):
-    
-        #self.SUBTOKEN_START = "<START>"
-        #self.SUBTOKEN_END = "<END>"
-        self.NONE = "<NONE>" #is this the same as padding?
-
-    """def get_file_data(self, input_file):
-        with open(input_file, 'r') as f:
-            data = json.load(f)
-        names = []
-        original_names = []
-        code = []
-        for entry in data:
-            # skip entries with no relevant data (this will crash the code)
-            if len(entry["tokens"]) == 0 or len(entry["name"]) == 0:
-                continue
-            code.append(self.remove_id_markers(entry["tokens"]))
-            original_names.append(",".join(entry["name"]))
-            subtokens = entry["name"]
-            names.append([self.SUBTOKEN_START] + subtokens + [self.SUBTOKEN_END])
-
-        return names, code, original_names"""
-
-    def remove_id_markers(self, code):
-        return list(filter(lambda t: t != "<id>" and t != "</id>", code))

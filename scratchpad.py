@@ -20,11 +20,11 @@ LIMIT = 0
 
 TEST_DATA = 'data/test.csv'
 TRAIN_DATA = 'data/train.csv'
-MAX_LENGTH = 300
-THRESHOLD = 3
+MAX_LENGTH = 250
+THRESHOLD = 2
 BATCH_SIZE = 32
 USE_CUDA = torch.cuda.is_available()
-SAVE = 'conv_attn.pt'
+SAVE = 'data/conv_attn.pt'
 
 EMBEDDING_DIM = 128
 #for conv
@@ -34,7 +34,7 @@ W1 = 24
 W2 = 29
 W3 = 10
 
-N_EPOCHS = 10
+N_EPOCHS = 50
 MASK_VALUE = 1e-10
 
 #import data w/ pandas
@@ -64,13 +64,16 @@ test_names_targets_idx = dictionary.tokenize(test_names_targets)
 
 #pad sources
 #if we DON'T shuffle the data in the dataloader then this is how we get lengths
-"""train_bodies_idx, _ = dictionary.pad_sequences(train_bodies_idx)
-train_names_prev_idx, _ = dictionary.pad_sequences(train_names_prev_idx)
+#THIS IS NOW HANDLED IN THE DATALOADER W/ THE UTILS.PADCOLLATE FUNCTIONS
+#train_bodies_idx, _ = dictionary.pad_sequences(train_bodies_idx)
+#train_names_prev_idx, _ = dictionary.pad_sequences(train_names_prev_idx)
 
-test_bodies_idx, _ = dictionary.pad_sequences(test_bodies_idx)
-test_names_prev_idx, _ = dictionary.pad_sequences(test_names_prev_idx)
-"""
+#test_bodies_idx, _ = dictionary.pad_sequences(test_bodies_idx)
+#test_names_prev_idx, _ = dictionary.pad_sequences(test_names_prev_idx)
+
+
 #create dataset
+#THIS IS NOW HANDLED IN THE SUBTOKENDATASET OBJECT
 #train_bodies_idx = torch.LongTensor(train_bodies_idx)
 #train_names_prev_idx = torch.LongTensor(train_names_prev_idx)
 #train_names_target_idx = torch.LongTensor(train_names_target_idx)
@@ -84,8 +87,8 @@ train_dataset = utils.SubtokenDataset(train_bodies_idx, train_names_prev_idx, tr
 test_dataset = utils.SubtokenDataset(test_bodies_idx, test_names_prev_idx, test_names_targets_idx)
 
 #create dataloader
-train_data_loader = torch.utils.data.DataLoader(train_dataset, batch_size=BATCH_SIZE, collate_fn=utils.PadCollate(dim=0))
-test_data_loader = torch.utils.data.DataLoader(test_dataset, batch_size=BATCH_SIZE, collate_fn=utils.PadCollate(dim=0))
+train_data_loader = torch.utils.data.DataLoader(train_dataset, batch_size=BATCH_SIZE, shuffle=True, collate_fn=utils.PadCollate(dim=0))
+test_data_loader = torch.utils.data.DataLoader(test_dataset, batch_size=BATCH_SIZE, shuffle=True, collate_fn=utils.PadCollate(dim=0))
 
 #define model, criterion and optimizer
 model = models.ConvAttentionNetwork(vocab_size, EMBEDDING_DIM, K1, K2, W1, W2, W3)
@@ -93,8 +96,10 @@ model = models.ConvAttentionNetwork(vocab_size, EMBEDDING_DIM, K1, K2, W1, W2, W
 print(model)
 
 criterion = nn.CrossEntropyLoss()
-optimizer = optim.Adam(model.parameters())
-scheduler = lr_scheduler.ReduceLROnPlateau(optimizer, patience=1, verbose=True)
+#optimizer = optim.RMSprop(model.parameters())
+#optimizer = optim.Adam(model.parameters())
+optimizer = optim.SGD(model.parameters(), lr=1, momentum=0.9, nesterov=True)
+scheduler = lr_scheduler.ReduceLROnPlateau(optimizer, patience=5, verbose=True)
 
 if USE_CUDA:
     model = model.cuda()
@@ -107,11 +112,11 @@ assert pad_idx == 0, 'PADDING CURRENTLY NEEDS TO BE ZERO FOR THE MODEL TO WORK'
 
 print(f'Processing complete in {time.time() - preprocess_start_time:.1f}s')
 
+best_val_loss = float('inf')
 
 for e in range(1, N_EPOCHS+1):
 
     epoch_loss = 0
-    best_val_loss = float('inf')
     val_loss = 0
     epoch_start_time = time.time()
     start_time = time.time()
@@ -155,9 +160,9 @@ for e in range(1, N_EPOCHS+1):
 
     for i, (Xb, Xn, y) in enumerate(tqdm(test_data_loader, desc='Validate'), start=1):
 
-        Xb = Variable(Xb, volatile=True)
-        Xn = Variable(Xn, volatile=True)
-        y = Variable(y.squeeze(1), volatile=True)
+        Xb = Variable(Xb)
+        Xn = Variable(Xn)
+        y = Variable(y.squeeze(1))
 
         if USE_CUDA:
             Xb = Xb.cuda()
@@ -170,12 +175,12 @@ for e in range(1, N_EPOCHS+1):
 
         val_loss += loss.data[0]
 
-    if val_loss/len(train_data_loader) < best_val_loss:
+    if val_loss/len(test_data_loader) < best_val_loss:
         torch.save(model.state_dict(), SAVE)
-        best_val_loss = val_loss/len(train_data_loader)
+        best_val_loss = val_loss/len(test_data_loader)
 
-    scheduler.step(val_loss/len(train_data_loader))
+    scheduler.step(val_loss/len(test_data_loader))
 
-    print(f'   Epoch: {e}, Train Loss: {epoch_loss/len(train_data_loader)}, Val. Loss: {val_loss/len(train_data_loader)}, s/epoch: {time.time() - epoch_start_time}')
+    print(f'   Epoch: {e}, Train Loss: {epoch_loss/len(train_data_loader)}, Val. Loss: {val_loss/len(test_data_loader)}, s/epoch: {time.time() - epoch_start_time}')
     
     

@@ -21,6 +21,7 @@ class ConvAttentionNetwork(nn.Module):
         self.attn_feat = AttentionFeatures(self.embedding, self.embedding_dim, self.k1, self.w1, self.k2, self.w2, self.w3)
         self.conv_attn_weights = AttentionWeights(self.k2, self.w3)
         self.bias = nn.Parameter(torch.ones(vocab_size)) #this should be initialized to: "the log of the empirical freq. of each target token in the training set"
+        self.fc = nn.Linear(self.embedding_dim, self.vocab_size)
 
     def forward(self, b, n_prev):
 
@@ -58,9 +59,11 @@ class ConvAttentionNetwork(nn.Module):
         E = self.embedding.weight.unsqueeze(0).expand(nhat.shape[0], -1, -1) #get embedding weights and transform into right shape
         nhatT = nhat.unsqueeze(1).permute(0, 2, 1) #add extra dim and transpose
 
-        n = F.softmax(torch.bmm(E, nhatT).squeeze(2) + self.bias, dim=1)
+        n = torch.bmm(E, nhatT).squeeze(2) + self.bias
 
         assert n.shape[1] == self.vocab_size
+
+        #n = F.softmax(self.fc(nhat))
 
         return n
 

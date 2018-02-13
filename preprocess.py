@@ -10,12 +10,14 @@ END_TOKEN = '<TITLE_START/>'
 
 ALL_FILES = os.listdir(DATA_DIR)
 
-TRAIN_FILES = [file for file in ALL_FILES if 'train' in file and 'all' not in file and 'shuffled' not in file]
+TRAIN_FILES = ['cassandra_train_methodnaming.json']
+TEST_FILES = ['cassandra_test_methodnaming.json']
 
-TEST_FILES = [file for file in ALL_FILES if 'test' in file and 'shuffled' not in file] 
+"""TRAIN_FILES = [file for file in ALL_FILES if 'train' in file and 'all' not in file and 'shuffled' not in file]
+
+TEST_FILES = [file for file in ALL_FILES if 'test' in file and 'shuffled' not in file]"""
 
 assert len(TRAIN_FILES) == len(TEST_FILES)
-assert len(TRAIN_FILES) == 11
 
 def files_to_examples(DIR, FILES):
     """
@@ -45,5 +47,5 @@ print(f'Testing examples: {len(test_data)}')
 train_df = pd.DataFrame.from_records(train_data)
 test_df = pd.DataFrame.from_records(test_data)
 
-train_df.to_csv('data/train.csv', index=False, header=False)
-test_df.to_csv('data/test.csv', index=False, header=False)
+train_df.to_csv('data/cassandra_train.csv', index=False, header=False)
+test_df.to_csv('data/cassandra_test.csv', index=False, header=False)

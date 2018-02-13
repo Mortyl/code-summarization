@@ -4,14 +4,12 @@
 
 - Download data from: http://groups.inf.ed.ac.uk/cup/codeattention/dataset.zip
 - Place in /data folder and extract
-    - Folder structure should be /data/json (also have train and test inside /data but we don't care about them)
+    - Folder structure should be /data/json (also have /train and /test inside /data but we don't care about them)
 - Run `preprocess.py` to get data into csv formats
     - Columns are: json filename, java filename, method name, method body
 	- Method names are split on camelCase and snake_case
 	- Method bodies are tokenized, with ids preceeded by an <id> token and followed by an </id> token
 - Run `scratchpad.py` to train the model
-    - Currently the model does not train, why is this?
-    - I feel it may be something simple I am overlooking
     - Try training on single project (which is what they do in the paper anyway)
 
 ### TODO

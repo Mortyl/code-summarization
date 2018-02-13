@@ -31,7 +31,8 @@ def get_data(path: str, limit: int) -> Tuple[list, list]:
         names[i] = n.split()
 
     for i, b in enumerate(tqdm(bodies, desc='Splitting bodies')):
-        bodies[i] = b.split()
+        #get rid of the <id> tags
+        bodies[i] = list(filter(lambda t: t != "<id>" and t != "</id>", b.split()))
 
     _bodies = []
     _prev = []
