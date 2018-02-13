@@ -8,11 +8,14 @@
 - Run `preprocess.py` to get data into csv formats
     - Columns are: json filename, java filename, method name, method body
 	- Method names are split on camelCase and snake_case
-	- Method bodies are tokenized, with ids preceeded by an <id> token and followed by a </id> token
+	- Method bodies are tokenized, with ids preceeded by an <id> token and followed by an </id> token
+- Run `scratchpad.py` to train the model
+    - Currently the model does not train, why is this?
+    - I feel it may be something simple I am overlooking
+    - Try training on single project (which is what they do in the paper anyway)
 
 ### TODO
 
-- Re-create Conv Attention model in PyTorch(?)
 - Train simple LSTM
 - Train simple BiDAF
 - Does the filename give any information? Are we allowed to use it? Do they use it?
