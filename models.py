@@ -25,7 +25,11 @@ class ConvAttentionNetwork(nn.Module):
     def forward(self, b, n_prev):
 
         n_padding = b.shape[1] - (b.shape[1] - (self.w1-1) - (self.w2-1) - (self.w3-1))
-        padding = Variable(torch.zeros(b.shape[0], n_padding).long()) # [bsz, n_padding]
+        
+        if torch.cuda.is_available():
+            padding = Variable(torch.zeros(b.shape[0], n_padding).long()).cuda()
+        else:
+            padding = Variable(torch.zeros(b.shape[0], n_padding).long()) # [bsz, n_padding]
         
         _b = torch.cat((b, padding), dim=1)
 
@@ -176,7 +180,7 @@ class AttentionFeatures(nn.Module):
 
         C = C.permute(0, 2, 1) #input to conv needs n_channels as dim 1 #[bsz, emb_dim, max_len]
 
-        L1 = self.conv1(C)
+        L1 = F.relu(self.conv1(C))
     
         _L2 = self.conv2(L1)
 

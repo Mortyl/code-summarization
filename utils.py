@@ -157,3 +157,33 @@ def f1_score(pred: torch.LongTensor, target: torch.LongTensor) -> Tuple[float, f
     f1 = 2 * (precision*recall)/(precision+recall)
 
     return f1, precision, recall
+
+class PadCollate:
+
+    def __init__(self, dim=0):
+        self.dim=dim
+
+    def pad_collate(self, batch):
+        #find longest sequence
+        bod_max_len = max(list(map(lambda x: x[0].shape[self.dim], batch)))
+        prev_max_len = max(list(map(lambda x: x[1].shape[self.dim], batch)))
+        _b = []
+        _p = []
+
+        for i,(bod, prev, tar) in enumerate(batch):
+            _b.append(torch.cat((bod, torch.zeros([bod_max_len-bod.shape[self.dim]]).long()),dim=0))
+            _p.append(torch.cat((prev, torch.zeros([prev_max_len-prev.shape[self.dim]]).long()),dim=0))
+            assert len(_b[i]) == bod_max_len
+            assert len(_p[i]) == prev_max_len
+        
+        #stack all
+        x1s = torch.stack(list(map(lambda x: x, _b)), dim=0)
+        x2s = torch.stack(list(map(lambda x: x, _p)), dim=0)
+        ys = torch.stack(list(map(lambda x: x[2], batch)), dim=0)
+
+        return x1s, x2s, ys
+
+    def __call__(self, batch):
+        return self.pad_collate(batch)
+    
+

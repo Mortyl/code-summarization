@@ -16,7 +16,7 @@ import models
 preprocess_start_time = time.time()
 
 #constants
-LIMIT = 10
+LIMIT = 0
 
 TEST_DATA = 'data/test.csv'
 TRAIN_DATA = 'data/train.csv'
@@ -24,6 +24,7 @@ MAX_LENGTH = 300
 THRESHOLD = 3
 BATCH_SIZE = 32
 USE_CUDA = torch.cuda.is_available()
+SAVE = 'conv_attn.pt'
 
 EMBEDDING_DIM = 128
 #for conv
@@ -63,12 +64,12 @@ test_names_targets_idx = dictionary.tokenize(test_names_targets)
 
 #pad sources
 #if we DON'T shuffle the data in the dataloader then this is how we get lengths
-train_bodies_idx, _ = dictionary.pad_sequences(train_bodies_idx)
+"""train_bodies_idx, _ = dictionary.pad_sequences(train_bodies_idx)
 train_names_prev_idx, _ = dictionary.pad_sequences(train_names_prev_idx)
 
 test_bodies_idx, _ = dictionary.pad_sequences(test_bodies_idx)
 test_names_prev_idx, _ = dictionary.pad_sequences(test_names_prev_idx)
-
+"""
 #create dataset
 #train_bodies_idx = torch.LongTensor(train_bodies_idx)
 #train_names_prev_idx = torch.LongTensor(train_names_prev_idx)
@@ -83,8 +84,8 @@ train_dataset = utils.SubtokenDataset(train_bodies_idx, train_names_prev_idx, tr
 test_dataset = utils.SubtokenDataset(test_bodies_idx, test_names_prev_idx, test_names_targets_idx)
 
 #create dataloader
-train_data_loader = torch.utils.data.DataLoader(train_dataset, batch_size=BATCH_SIZE)
-test_data_loader = torch.utils.data.DataLoader(test_dataset, batch_size=BATCH_SIZE)
+train_data_loader = torch.utils.data.DataLoader(train_dataset, batch_size=BATCH_SIZE, collate_fn=utils.PadCollate(dim=0))
+test_data_loader = torch.utils.data.DataLoader(test_dataset, batch_size=BATCH_SIZE, collate_fn=utils.PadCollate(dim=0))
 
 #define model, criterion and optimizer
 model = models.ConvAttentionNetwork(vocab_size, EMBEDDING_DIM, K1, K2, W1, W2, W3)
@@ -92,8 +93,8 @@ model = models.ConvAttentionNetwork(vocab_size, EMBEDDING_DIM, K1, K2, W1, W2, W
 print(model)
 
 criterion = nn.CrossEntropyLoss()
-optimizer = optim.RMSprop(model.parameters())
-#scheduler = lr_scheduler.ReduceLROnPlateau(optimizer, patience=1, verbose=True)
+optimizer = optim.Adam(model.parameters())
+scheduler = lr_scheduler.ReduceLROnPlateau(optimizer, patience=1, verbose=True)
 
 if USE_CUDA:
     model = model.cuda()
@@ -110,6 +111,7 @@ print(f'Processing complete in {time.time() - preprocess_start_time:.1f}s')
 for e in range(1, N_EPOCHS+1):
 
     epoch_loss = 0
+    best_val_loss = float('inf')
     val_loss = 0
     epoch_start_time = time.time()
     start_time = time.time()
@@ -151,7 +153,7 @@ for e in range(1, N_EPOCHS+1):
 
     model.eval()
 
-    """for i, (Xb, Xn, y) in enumerate(tqdm(train_data_loader, desc='Validate'), start=1):
+    for i, (Xb, Xn, y) in enumerate(tqdm(test_data_loader, desc='Validate'), start=1):
 
         Xb = Variable(Xb, volatile=True)
         Xn = Variable(Xn, volatile=True)
@@ -166,7 +168,13 @@ for e in range(1, N_EPOCHS+1):
 
         loss = criterion(_y, y)
 
-        val_loss += loss.data[0]"""
+        val_loss += loss.data[0]
+
+    if val_loss/len(train_data_loader) < best_val_loss:
+        torch.save(model.state_dict(), SAVE)
+        best_val_loss = val_loss/len(train_data_loader)
+
+    scheduler.step(val_loss/len(train_data_loader))
 
     print(f'   Epoch: {e}, Train Loss: {epoch_loss/len(train_data_loader)}, Val. Loss: {val_loss/len(train_data_loader)}, s/epoch: {time.time() - epoch_start_time}')
     
